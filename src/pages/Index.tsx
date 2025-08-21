@@ -184,9 +184,9 @@ const Index = () => {
             </section>
 
             {/* Testimonials */}
-            <section className="bg-background py-0">
-              <div className="container mx-auto px-4 py-[30px]">
-                <h2 className="text-3xl font-bold text-center mb-12 py-[30px]">What Users Say</h2>
+            <section className="bg-background py-16">
+              <div className="container mx-auto px-4">
+                <h2 className="text-3xl font-bold text-center mb-12">What Users Say</h2>
                 <AnimatedTestimonials />
               </div>
             </section>

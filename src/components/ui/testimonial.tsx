@@ -63,7 +63,7 @@ const AnimatedTestimonials = ({
   const randomRotate = () => `${Math.floor(Math.random() * 16) - 8}deg`;
 
   return (
-    <div className="mx-auto max-w-sm px-4 py-20 font-sans antialiased md:max-w-4xl md:px-8 lg:px-12">
+    <div className="mx-auto max-w-sm px-4 py-8 font-sans antialiased md:max-w-4xl md:px-8 lg:px-12">
       <div className="relative grid grid-cols-1 gap-y-12 md:grid-cols-2 md:gap-x-20">
         {/* Image Section */}
         <div className="flex items-center justify-center">
@@ -91,7 +91,7 @@ const AnimatedTestimonials = ({
                       width={500}
                       height={500}
                       draggable={false}
-                      className="h-full w-full rounded-3xl object-cover shadow-2xl"
+                      className="h-full w-full rounded-3xl object-cover shadow-card brightness-90 saturate-75 contrast-105"
                       onError={(e) => {
                         e.currentTarget.src = `https://placehold.co/500x500/e2e8f0/64748b?text=${testimonial.name.charAt(0)}`;
                         e.currentTarget.onerror = null;
@@ -157,10 +157,8 @@ function AnimatedTestimonialsDemo() {
 // Main App Component
 export function Component() {
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-background">
-        <div className="z-10">
-            <AnimatedTestimonialsDemo />
-        </div>
+    <div className="w-full bg-background">
+        <AnimatedTestimonialsDemo />
     </div>
   );
 }
