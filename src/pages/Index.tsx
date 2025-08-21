@@ -4,9 +4,7 @@ import { ProgressTracker } from "@/components/ProgressTracker";
 import { ResearchReport } from "@/components/ResearchReport";
 import { Navigation } from "@/components/Navigation";
 import { Component as AnimatedTestimonials } from "@/components/ui/testimonial";
-
 type AppState = "input" | "analysis" | "report";
-
 interface ReportData {
   ticker: string;
   recommendation: "Buy" | "Sell" | "Hold";
@@ -15,35 +13,28 @@ interface ReportData {
   upside: number;
   confidence: string;
 }
-
 const Index = () => {
   const [appState, setAppState] = useState<AppState>("input");
   const [currentTicker, setCurrentTicker] = useState<string>("");
   const [reportData, setReportData] = useState<ReportData | null>(null);
-
   const handleStartAnalysis = (ticker: string) => {
     setCurrentTicker(ticker);
     setAppState("analysis");
   };
-
   const handleAnalysisComplete = (data: ReportData) => {
     setReportData(data);
     setAppState("report");
   };
-
   const handleBackToInput = () => {
     setAppState("input");
     setCurrentTicker("");
     setReportData(null);
   };
-
-  return (
-    <div className="min-h-screen bg-gradient-subtle">
+  return <div className="min-h-screen bg-gradient-subtle">
       <Navigation />
       <div className="container mx-auto px-4 py-8 pt-24">
-        {appState === "input" && (
-          <>
-            <div className="flex items-center justify-center min-h-[80vh]">
+        {appState === "input" && <>
+            <div className="flex items-center justify-center min-h-[80vh] py-[30px]">
               <TickerInput onStartAnalysis={handleStartAnalysis} />
             </div>
             
@@ -193,9 +184,9 @@ const Index = () => {
             </section>
 
             {/* Testimonials */}
-            <section className="py-16 bg-background">
-              <div className="container mx-auto px-4">
-                <h2 className="text-3xl font-bold text-center mb-12">What Users Say</h2>
+            <section className="bg-background py-0">
+              <div className="container mx-auto px-4 py-[30px]">
+                <h2 className="text-3xl font-bold text-center mb-12 py-[30px]">What Users Say</h2>
                 <AnimatedTestimonials />
               </div>
             </section>
@@ -228,29 +219,16 @@ const Index = () => {
                 </p>
               </div>
             </footer>
-          </>
-        )}
+          </>}
         
-        {appState === "analysis" && (
-          <div className="py-8">
-            <ProgressTracker 
-              ticker={currentTicker} 
-              onComplete={handleAnalysisComplete} 
-            />
-          </div>
-        )}
+        {appState === "analysis" && <div className="py-8">
+            <ProgressTracker ticker={currentTicker} onComplete={handleAnalysisComplete} />
+          </div>}
         
-        {appState === "report" && reportData && (
-          <div className="py-8">
-            <ResearchReport 
-              reportData={reportData} 
-              onBack={handleBackToInput} 
-            />
-          </div>
-        )}
+        {appState === "report" && reportData && <div className="py-8">
+            <ResearchReport reportData={reportData} onBack={handleBackToInput} />
+          </div>}
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
