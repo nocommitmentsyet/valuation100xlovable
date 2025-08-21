@@ -12,20 +12,26 @@ interface ReportData {
   analysis_id: string;
   ticker: string;
   company_name: string;
-  investment_score: number;
-  fair_value: number;
-  current_price: number;
-  recommendation: "Buy" | "Sell" | "Hold";
-  confidence: string;
-  summary: string;
-  detailed_analysis: {
-    investment_thesis: string;
-    key_drivers: string[];
-    financial_analysis: string;
-    scenario_analysis: string;
-    risks: string[];
+  status: string;
+  results: {
+    investment_score: number;
+    fair_value: number;
+    current_price: number;
+    recommendation: "BUY" | "SELL" | "HOLD";
+    confidence: number;
+    analysis_summary: {
+      executive_summary: string;
+      key_strengths: string[];
+      key_risks: string[];
+      price_target?: number;
+    };
   };
-  created_at: string;
+  metadata?: {
+    analysis_duration: string;
+    data_sources: string[];
+    model_versions: Record<string, string>;
+  };
+  completed_at: string;
 }
 
 const ReportPage = () => {
@@ -58,35 +64,36 @@ const ReportPage = () => {
       console.error('Error fetching report:', err);
       setError(err instanceof Error ? err.message : 'Failed to load report');
       
-      // Mock data for demo purposes
+      // Mock data for demo purposes - matching actual API structure
       setReportData({
         analysis_id: analysisId,
         ticker: "DEMO",
         company_name: "Demo Corporation",
-        investment_score: 7.2,
-        fair_value: 150.00,
-        current_price: 125.50,
-        recommendation: "Buy",
-        confidence: "High",
-        summary: "Based on comprehensive analysis, this stock shows strong fundamentals with significant upside potential. The company demonstrates solid financial performance and strategic positioning in its market segment.",
-        detailed_analysis: {
-          investment_thesis: "The company shows strong competitive advantages and growth potential in the expanding market...",
-          key_drivers: [
-            "Strong revenue growth trajectory",
-            "Expanding market share",
-            "Efficient cost management",
-            "Strategic partnerships"
-          ],
-          financial_analysis: "The company demonstrates solid financial metrics with improving margins and strong cash flow generation...",
-          scenario_analysis: "Bull case scenario projects 35% upside, base case shows 20% upside, while bear case suggests limited downside risk...",
-          risks: [
-            "Market volatility impact",
-            "Regulatory changes",
-            "Competition intensification",
-            "Economic downturn effects"
-          ]
+        status: "completed",
+        results: {
+          investment_score: 7.2,
+          fair_value: 150.00,
+          current_price: 125.50,
+          recommendation: "BUY",
+          confidence: 0.85,
+          analysis_summary: {
+            executive_summary: "Based on comprehensive analysis, this stock shows strong fundamentals with significant upside potential. The company demonstrates solid financial performance and strategic positioning in its market segment.",
+            key_strengths: [
+              "Strong revenue growth trajectory",
+              "Expanding market share",
+              "Efficient cost management",
+              "Strategic partnerships"
+            ],
+            key_risks: [
+              "Market volatility impact",
+              "Regulatory changes", 
+              "Competition intensification",
+              "Economic downturn effects"
+            ],
+            price_target: 175.00
+          }
         },
-        created_at: new Date().toISOString()
+        completed_at: new Date().toISOString()
       });
     } finally {
       setIsLoading(false);
@@ -144,16 +151,16 @@ const ReportPage = () => {
     const reportText = `
 ${reportData.company_name} (${reportData.ticker}) - Investment Report
 
-Investment Score: ${reportData.investment_score}/10
-Recommendation: ${reportData.recommendation}
-Fair Value: $${reportData.fair_value}
-Current Price: $${reportData.current_price}
-Upside: ${calculateUpside(reportData.fair_value, reportData.current_price).toFixed(1)}%
+Investment Score: ${reportData.results.investment_score.toFixed(1)}/10
+Recommendation: ${reportData.results.recommendation}
+Fair Value: $${reportData.results.fair_value.toFixed(2)}
+Current Price: $${reportData.results.current_price}
+Upside: ${calculateUpside(reportData.results.fair_value, reportData.results.current_price).toFixed(1)}%
 
 Executive Summary:
-${reportData.summary}
+${reportData.results.analysis_summary.executive_summary}
 
-Generated on: ${new Date(reportData.created_at).toLocaleDateString()}
+Generated on: ${new Date(reportData.completed_at).toLocaleDateString()}
     `.trim();
 
     navigator.clipboard.writeText(reportText);
@@ -173,33 +180,29 @@ Generated on: ${new Date(reportData.created_at).toLocaleDateString()}
     const reportContent = `# ${reportData.company_name} (${reportData.ticker}) - Investment Report
 
 ## Investment Overview
-- **Investment Score**: ${reportData.investment_score}/10
-- **Recommendation**: ${reportData.recommendation}
-- **Fair Value**: $${reportData.fair_value}
-- **Current Price**: $${reportData.current_price}
-- **Upside Potential**: ${calculateUpside(reportData.fair_value, reportData.current_price).toFixed(1)}%
-- **Confidence**: ${reportData.confidence}
+- **Investment Score**: ${reportData.results.investment_score.toFixed(1)}/10
+- **Recommendation**: ${reportData.results.recommendation}
+- **Fair Value**: $${reportData.results.fair_value.toFixed(2)}
+- **Current Price**: $${reportData.results.current_price}
+- **Upside Potential**: ${calculateUpside(reportData.results.fair_value, reportData.results.current_price).toFixed(1)}%
+- **Confidence**: ${Math.round(reportData.results.confidence * 100)}%
 
 ## Executive Summary
-${reportData.summary}
+${reportData.results.analysis_summary.executive_summary}
 
-## Investment Thesis
-${reportData.detailed_analysis.investment_thesis}
-
-## Key Value Drivers
-${reportData.detailed_analysis.key_drivers.map(driver => `- ${driver}`).join('\n')}
-
-## Financial Analysis
-${reportData.detailed_analysis.financial_analysis}
-
-## Scenario Analysis
-${reportData.detailed_analysis.scenario_analysis}
+## Key Strengths
+${reportData.results.analysis_summary.key_strengths.map(strength => `- ${strength}`).join('\n')}
 
 ## Key Risks
-${reportData.detailed_analysis.risks.map(risk => `- ${risk}`).join('\n')}
+${reportData.results.analysis_summary.key_risks.map(risk => `- ${risk}`).join('\n')}
+
+${reportData.metadata ? `## Analysis Details
+- **Duration**: ${reportData.metadata.analysis_duration}
+- **Data Sources**: ${reportData.metadata.data_sources.join(', ')}
+` : ''}
 
 ---
-*Report generated on ${new Date(reportData.created_at).toLocaleDateString()}*
+*Report generated on ${new Date(reportData.completed_at).toLocaleDateString()}*
 *This report is for informational purposes only and does not constitute financial advice.*
 `;
 
@@ -265,7 +268,7 @@ ${reportData.detailed_analysis.risks.map(risk => `- ${risk}`).join('\n')}
     );
   }
 
-  const upside = calculateUpside(reportData.fair_value, reportData.current_price);
+  const upside = calculateUpside(reportData.results.fair_value, reportData.results.current_price);
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
@@ -313,20 +316,20 @@ ${reportData.detailed_analysis.risks.map(risk => `- ${risk}`).join('\n')}
               {/* Left Side - Score & Recommendation */}
               <div className="space-y-6">
                 <div className="text-center">
-                  <div className={`inline-flex items-center justify-center w-24 h-24 rounded-full border-2 ${getScoreBackground(reportData.investment_score)}`}>
-                    <span className={`text-3xl font-bold ${getScoreColor(reportData.investment_score)}`}>
-                      {reportData.investment_score}
+                  <div className={`inline-flex items-center justify-center w-24 h-24 rounded-full border-2 ${getScoreBackground(reportData.results.investment_score)}`}>
+                    <span className={`text-3xl font-bold ${getScoreColor(reportData.results.investment_score)}`}>
+                      {reportData.results.investment_score.toFixed(1)}
                     </span>
                   </div>
                   <p className="text-sm text-muted-foreground mt-2">Investment Score</p>
                 </div>
                 
                 <div className="text-center">
-                <div className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-xl ${getRecommendationColor(reportData.recommendation)}`}>
-                  {getRecommendationIcon(reportData.recommendation)}
-                  {reportData.recommendation?.toUpperCase() || 'LOADING'}
+                  <div className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-xl ${getRecommendationColor(reportData.results.recommendation)}`}>
+                    {getRecommendationIcon(reportData.results.recommendation)}
+                    {reportData.results.recommendation?.toUpperCase() || 'LOADING'}
                   </div>
-                  <p className="text-sm text-muted-foreground mt-2">{reportData.confidence} Confidence</p>
+                  <p className="text-sm text-muted-foreground mt-2">{Math.round(reportData.results.confidence * 100)}% Confidence</p>
                 </div>
               </div>
 
@@ -335,11 +338,11 @@ ${reportData.detailed_analysis.risks.map(risk => `- ${risk}`).join('\n')}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center p-4 bg-card rounded-lg border">
                     <p className="text-sm text-muted-foreground mb-1">Current Price</p>
-                    <p className="text-2xl font-bold">${reportData.current_price}</p>
+                    <p className="text-2xl font-bold">${reportData.results.current_price}</p>
                   </div>
                   <div className="text-center p-4 bg-card rounded-lg border">
                     <p className="text-sm text-muted-foreground mb-1">Fair Value</p>
-                    <p className="text-2xl font-bold text-success">${reportData.fair_value}</p>
+                    <p className="text-2xl font-bold text-success">${reportData.results.fair_value.toFixed(2)}</p>
                   </div>
                 </div>
                 
@@ -354,98 +357,35 @@ ${reportData.detailed_analysis.risks.map(risk => `- ${risk}`).join('\n')}
           {/* Executive Summary */}
           <Card className="p-6 shadow-floating">
             <h2 className="text-2xl font-bold mb-4">Executive Summary</h2>
-            <p className="text-lg leading-relaxed text-foreground">{reportData.summary}</p>
+            <p className="text-lg leading-relaxed text-foreground">{reportData.results.analysis_summary.executive_summary}</p>
           </Card>
 
           {/* Detailed Analysis Sections */}
           <div className="space-y-4">
-            {/* Investment Thesis */}
+            {/* Key Strengths */}
             <Card className="shadow-floating">
               <Collapsible 
-                open={expandedSections.thesis} 
-                onOpenChange={() => toggleSection('thesis')}
+                open={expandedSections.strengths} 
+                onOpenChange={() => toggleSection('strengths')}
               >
                 <CollapsibleTrigger asChild>
                   <Button 
                     variant="ghost" 
                     className="w-full justify-between p-6 h-auto text-left"
                   >
-                    <h3 className="text-xl font-semibold">Investment Thesis</h3>
-                    <ChevronDown className={`h-5 w-5 transition-transform ${expandedSections.thesis ? 'rotate-180' : ''}`} />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="px-6 pb-6">
-                  <p className="text-foreground leading-relaxed">{reportData.detailed_analysis.investment_thesis}</p>
-                </CollapsibleContent>
-              </Collapsible>
-            </Card>
-
-            {/* Key Value Drivers */}
-            <Card className="shadow-floating">
-              <Collapsible 
-                open={expandedSections.drivers} 
-                onOpenChange={() => toggleSection('drivers')}
-              >
-                <CollapsibleTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-between p-6 h-auto text-left"
-                  >
-                    <h3 className="text-xl font-semibold">Key Value Drivers</h3>
-                    <ChevronDown className={`h-5 w-5 transition-transform ${expandedSections.drivers ? 'rotate-180' : ''}`} />
+                    <h3 className="text-xl font-semibold">Key Strengths</h3>
+                    <ChevronDown className={`h-5 w-5 transition-transform ${expandedSections.strengths ? 'rotate-180' : ''}`} />
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="px-6 pb-6">
                   <ul className="space-y-2">
-                    {reportData.detailed_analysis.key_drivers.map((driver, index) => (
+                    {reportData.results.analysis_summary.key_strengths.map((strength, index) => (
                       <li key={index} className="flex items-start gap-2">
-                        <div className="w-2 h-2 bg-primary rounded-full mt-2 shrink-0" />
-                        <span className="text-foreground">{driver}</span>
+                        <div className="w-2 h-2 bg-success rounded-full mt-2 shrink-0" />
+                        <span className="text-foreground">{strength}</span>
                       </li>
                     ))}
                   </ul>
-                </CollapsibleContent>
-              </Collapsible>
-            </Card>
-
-            {/* Financial Analysis */}
-            <Card className="shadow-floating">
-              <Collapsible 
-                open={expandedSections.financial} 
-                onOpenChange={() => toggleSection('financial')}
-              >
-                <CollapsibleTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-between p-6 h-auto text-left"
-                  >
-                    <h3 className="text-xl font-semibold">Financial Analysis</h3>
-                    <ChevronDown className={`h-5 w-5 transition-transform ${expandedSections.financial ? 'rotate-180' : ''}`} />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="px-6 pb-6">
-                  <p className="text-foreground leading-relaxed">{reportData.detailed_analysis.financial_analysis}</p>
-                </CollapsibleContent>
-              </Collapsible>
-            </Card>
-
-            {/* Scenario Analysis */}
-            <Card className="shadow-floating">
-              <Collapsible 
-                open={expandedSections.scenario} 
-                onOpenChange={() => toggleSection('scenario')}
-              >
-                <CollapsibleTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    className="w-full justify-between p-6 h-auto text-left"
-                  >
-                    <h3 className="text-xl font-semibold">Scenario Analysis</h3>
-                    <ChevronDown className={`h-5 w-5 transition-transform ${expandedSections.scenario ? 'rotate-180' : ''}`} />
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="px-6 pb-6">
-                  <p className="text-foreground leading-relaxed">{reportData.detailed_analysis.scenario_analysis}</p>
                 </CollapsibleContent>
               </Collapsible>
             </Card>
@@ -467,7 +407,7 @@ ${reportData.detailed_analysis.risks.map(risk => `- ${risk}`).join('\n')}
                 </CollapsibleTrigger>
                 <CollapsibleContent className="px-6 pb-6">
                   <ul className="space-y-2">
-                    {reportData.detailed_analysis.risks.map((risk, index) => (
+                    {reportData.results.analysis_summary.key_risks.map((risk, index) => (
                       <li key={index} className="flex items-start gap-2">
                         <div className="w-2 h-2 bg-destructive rounded-full mt-2 shrink-0" />
                         <span className="text-foreground">{risk}</span>
@@ -477,7 +417,47 @@ ${reportData.detailed_analysis.risks.map(risk => `- ${risk}`).join('\n')}
                 </CollapsibleContent>
               </Collapsible>
             </Card>
+
+            {/* Analysis Metadata */}
+            {reportData.metadata && (
+              <Card className="shadow-floating">
+                <Collapsible 
+                  open={expandedSections.metadata} 
+                  onOpenChange={() => toggleSection('metadata')}
+                >
+                  <CollapsibleTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      className="w-full justify-between p-6 h-auto text-left"
+                    >
+                      <h3 className="text-xl font-semibold">Analysis Details</h3>
+                      <ChevronDown className={`h-5 w-5 transition-transform ${expandedSections.metadata ? 'rotate-180' : ''}`} />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="px-6 pb-6">
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-semibold mb-2">Analysis Duration</h4>
+                        <p className="text-foreground">{reportData.metadata.analysis_duration}</p>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold mb-2">Data Sources</h4>
+                        <ul className="space-y-1">
+                          {reportData.metadata.data_sources.map((source, index) => (
+                            <li key={index} className="flex items-center gap-2">
+                              <div className="w-1.5 h-1.5 bg-primary rounded-full" />
+                              <span className="text-foreground">{source}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </Card>
+            )}
           </div>
+
 
           {/* Disclaimer */}
           <Card className="p-6 bg-muted/30 border-muted">
@@ -486,7 +466,7 @@ ${reportData.detailed_analysis.risks.map(risk => `- ${risk}`).join('\n')}
               Past performance does not guarantee future results. Please conduct your own research and consult with a financial advisor before making investment decisions.
             </p>
             <p className="text-xs text-muted-foreground text-center mt-2">
-              Report generated on {new Date(reportData.created_at).toLocaleDateString()} • Analysis ID: {reportData.analysis_id}
+              Report generated on {new Date(reportData.completed_at).toLocaleDateString()} • Analysis ID: {reportData.analysis_id}
             </p>
           </Card>
         </div>
