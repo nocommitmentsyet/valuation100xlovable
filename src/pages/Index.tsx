@@ -195,9 +195,7 @@ const Index = () => {
             <section className="py-16 bg-card">
               <div className="container mx-auto px-4">
                 <h2 className="text-3xl font-bold text-center mb-8">Built For</h2>
-                <p className="text-center text-muted-foreground mb-8 max-w-2xl mx-auto">
-                  Designed for individual investors first, with professional use cases coming soon.
-                </p>
+                
                 <div className="flex justify-center gap-4 flex-wrap">
                   <span className="bg-accent text-accent-foreground px-4 py-2 rounded-full font-medium">Individual Investors</span>
                   <span className="bg-accent text-accent-foreground px-4 py-2 rounded-full font-medium">DIY Analysts</span>
