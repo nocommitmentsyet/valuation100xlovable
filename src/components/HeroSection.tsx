@@ -5,7 +5,7 @@ export const HeroSection = () => {
   return (
     <div className="w-full min-h-[80vh] relative overflow-hidden bg-gradient-subtle">
       <div className="pt-32 text-5xl sm:text-6xl md:text-7xl lg:text-8xl text-foreground w-full text-center font-bold">
-        DeepResearch
+        Valuation100x
       </div>
       <p className="pt-6 text-lg sm:text-xl md:text-2xl text-muted-foreground w-full text-center max-w-3xl mx-auto px-4">
         Institutional-grade stock analysis in 15 minutes using Damodaran methodology
