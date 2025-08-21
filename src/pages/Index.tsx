@@ -152,7 +152,7 @@ const Index = () => {
             {/* Why DeepResearch */}
             <section className="py-16 bg-card">
               <div className="container mx-auto px-4">
-                <h2 className="text-3xl font-bold text-center mb-12">Why DeepResearch?</h2>
+                <h2 className="text-3xl font-bold text-center mb-12">Why Valuation100x?</h2>
                 <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
                   <div className="flex items-start space-x-3">
                     <div className="w-6 h-6 bg-primary rounded-full flex-shrink-0 mt-1"></div>
