@@ -117,8 +117,8 @@ export const ProgressTracker = ({ ticker, onComplete }: ProgressTrackerProps) =>
         const data = await response.json();
         setAnalysisId(data.analysis_id);
         
-        // Start status polling
-        startStatusPolling(data.analysis_id);
+        // Connect to WebSocket
+        connectWebSocket(data.analysis_id);
         
       } catch (error) {
         console.error('Failed to start analysis:', error);
@@ -143,62 +143,78 @@ export const ProgressTracker = ({ ticker, onComplete }: ProgressTrackerProps) =>
     };
   }, [ticker, toast]);
 
-  const startStatusPolling = (id: string) => {
-    statusPollingRef.current = setInterval(async () => {
-      try {
-        const response = await fetch(`https://valuation100x-production.up.railway.app/api/analysis/${id}/status`);
-        const data = await response.json();
-        
-        updateAnalysisState(data);
-        
-        // If analysis is complete, get results
-        if (data.status === 'completed') {
-          const resultsResponse = await fetch(`https://valuation100x-production.up.railway.app/api/analysis/${id}/results`);
-          const results = await resultsResponse.json();
-          
-          setProgress(100);
-          onComplete(results);
-          
-          if (statusPollingRef.current) {
-            clearInterval(statusPollingRef.current);
-          }
+  const connectWebSocket = (id: string) => {
+    const wsUrl = `wss://valuation100x-production.up.railway.app/ws/analysis/${id}`;
+    
+    try {
+      wsRef.current = new WebSocket(wsUrl);
+      
+      wsRef.current.onopen = () => {
+        console.log('WebSocket connected');
+      };
+      
+      wsRef.current.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          handleWebSocketMessage(message);
+        } catch (error) {
+          console.error('Failed to parse WebSocket message:', error);
         }
-        
-        // If analysis failed, stop polling
-        if (data.status === 'failed' || data.status === 'cancelled') {
-          if (statusPollingRef.current) {
-            clearInterval(statusPollingRef.current);
-          }
-          
-          toast({
-            title: data.status === 'cancelled' ? "Analysis Cancelled" : "Analysis Failed",
-            description: data.error_message || "The analysis was stopped.",
-            variant: "destructive",
-          });
-        }
-        
-      } catch (error) {
-        console.error('Status polling error:', error);
-      }
-    }, 2000); // Poll every 2 seconds
+      };
+      
+      wsRef.current.onclose = (event) => {
+        console.log('WebSocket closed:', event.code, event.reason);
+      };
+      
+      wsRef.current.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        toast({
+          title: "Connection Error",
+          description: "Lost connection to analysis server. Retrying...",
+          variant: "destructive",
+        });
+      };
+    } catch (error) {
+      console.error('Failed to connect WebSocket:', error);
+    }
   };
 
-  const updateAnalysisState = (statusData: any) => {
-    // Map API status to our step structure
+  const handleWebSocketMessage = (message: any) => {
+    switch (message.type) {
+      case "progress_update":
+        handleProgressUpdate(message);
+        break;
+      case "step_completed":
+        handleStepCompleted(message);
+        break;
+      case "analysis_completed":
+        handleAnalysisCompleted(message);
+        break;
+      case "analysis_error":
+        handleAnalysisError(message);
+        break;
+      default:
+        console.log('Unknown message type:', message.type);
+    }
+  };
+
+  const handleProgressUpdate = (message: any) => {
+    // Update progress bar with real value from WebSocket
+    setProgress(message.progress || 0);
+    
+    // Map step names to our step indices
     const stepMapping: Record<string, number> = {
+      'financial_data_collection': 0,
       'data-collection': 0,
       'financial-analysis': 1,
       'story-building': 2,
       'valuation': 3
     };
 
-    const currentStepIndex = stepMapping[statusData.current_step] ?? 0;
+    const currentStepIndex = stepMapping[message.current_step] ?? 0;
     setCurrentStep(currentStepIndex);
 
-    // Update progress
-    setProgress(statusData.progress_percentage || 0);
-
-    // Update steps status
+    // Update steps status - mark current as running, previous as completed
     setAnalysisSteps(prev => prev.map((step, index) => {
       if (index < currentStepIndex) {
         return { ...step, status: "completed" as const };
@@ -206,11 +222,63 @@ export const ProgressTracker = ({ ticker, onComplete }: ProgressTrackerProps) =>
         return { 
           ...step, 
           status: "running" as const,
-          logs: statusData.logs || step.logs
+          logs: message.logs || step.logs
         };
       } else {
         return { ...step, status: "pending" as const };
       }
+    }));
+  };
+
+  const handleStepCompleted = (message: any) => {
+    const stepMapping: Record<string, number> = {
+      'financial_data_collection': 0,
+      'data-collection': 0,
+      'financial-analysis': 1,
+      'story-building': 2,
+      'valuation': 3
+    };
+
+    const completedStepIndex = stepMapping[message.step] ?? 0;
+    
+    setAnalysisSteps(prev => prev.map((step, index) => {
+      if (index === completedStepIndex) {
+        return { ...step, status: "completed" as const };
+      }
+      return step;
+    }));
+  };
+
+  const handleAnalysisCompleted = async (message: any) => {
+    setProgress(100);
+    
+    // Mark all steps as completed
+    setAnalysisSteps(prev => prev.map(step => ({ ...step, status: "completed" as const })));
+    
+    try {
+      // Get final results
+      const resultsResponse = await fetch(`https://valuation100x-production.up.railway.app/api/analysis/${analysisId}/results`);
+      const results = await resultsResponse.json();
+      onComplete(results);
+    } catch (error) {
+      console.error('Failed to fetch results:', error);
+      onComplete(message.results || {});
+    }
+  };
+
+  const handleAnalysisError = (message: any) => {
+    toast({
+      title: "Analysis Failed",
+      description: message.error || "An error occurred during analysis.",
+      variant: "destructive",
+    });
+    
+    // Mark current step as error
+    setAnalysisSteps(prev => prev.map((step, index) => {
+      if (index === currentStep) {
+        return { ...step, status: "error" as const };
+      }
+      return step;
     }));
   };
 
