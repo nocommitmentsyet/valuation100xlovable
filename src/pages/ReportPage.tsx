@@ -164,7 +164,7 @@ Generated on: ${new Date(reportData.created_at).toLocaleDateString()}
   };
 
   const handlePrint = () => {
-    window.print();
+    window.print(); // Print the current page
   };
 
   const handleDownload = () => {
