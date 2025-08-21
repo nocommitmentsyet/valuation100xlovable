@@ -75,34 +75,76 @@ const Index = () => {
             </section>
 
             {/* Example Report Preview */}
-            <section className="py-16">
+            <section className="py-20 bg-muted/30">
               <div className="container mx-auto px-4">
-                <h2 className="text-3xl font-bold text-center mb-12">Example Report Preview</h2>
-                <div className="max-w-3xl mx-auto">
-                  <div className="bg-card rounded-lg border shadow-card p-8">
-                    <div className="flex items-center justify-between mb-6">
-                      <div>
-                        <h3 className="text-2xl font-bold">Tesla, Inc. (TSLA)</h3>
-                        <p className="text-muted-foreground">Electric Vehicle & Clean Energy</p>
-                      </div>
-                      <div className="bg-success text-success-foreground px-4 py-2 rounded-lg font-bold">
-                        BUY
+                <h2 className="text-4xl font-bold text-center mb-4">Example Report Preview</h2>
+                <p className="text-center text-muted-foreground mb-16 text-lg">See what you'll receive after our 15-minute analysis</p>
+                
+                <div className="max-w-5xl mx-auto">
+                  <div className="bg-background rounded-xl border shadow-elegant p-12 space-y-8">
+                    {/* Header */}
+                    <div className="border-b pb-6">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-3">
+                            <h1 className="text-4xl font-serif font-bold tracking-tight">Tesla, Inc.</h1>
+                            <span className="text-2xl font-mono font-bold text-muted-foreground">(TSLA)</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="px-3 py-1 bg-accent text-accent-foreground text-sm font-medium rounded-full">
+                              Electric Vehicle & Clean Energy
+                            </span>
+                            <span className="text-sm text-muted-foreground">• NASDAQ • Large Cap</span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="inline-flex items-center gap-2 bg-success text-success-foreground px-6 py-3 rounded-xl font-bold text-xl shadow-sm">
+                            <div className="w-3 h-3 bg-success-foreground rounded-full"></div>
+                            BUY
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-2">Strong Buy Rating</p>
+                        </div>
                       </div>
                     </div>
-                    <div className="space-y-4 text-sm">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-muted-foreground">Current Price</p>
-                          <p className="text-2xl font-bold">$248.42</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Intrinsic Value</p>
-                          <p className="text-2xl font-bold text-success">$295.00</p>
-                        </div>
+
+                    {/* Key Metrics */}
+                    <div className="grid grid-cols-4 gap-8">
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase">Current Price</p>
+                        <p className="text-3xl font-mono font-bold">$248.42</p>
+                        <p className="text-sm text-muted-foreground">As of Dec 20, 2024</p>
                       </div>
-                      <div className="border-t pt-4">
-                        <h4 className="font-semibold mb-2">Executive Summary</h4>
-                        <p className="text-muted-foreground">Based on Damodaran valuation methodology, Tesla shows strong fundamentals in the growing EV market with solid execution on production targets...</p>
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase">Intrinsic Value</p>
+                        <p className="text-3xl font-mono font-bold text-success">$295.00</p>
+                        <p className="text-sm text-success">+18.7% upside</p>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase">Confidence</p>
+                        <p className="text-2xl font-semibold">High</p>
+                        <p className="text-sm text-muted-foreground">85% confidence</p>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-muted-foreground tracking-wide uppercase">Time Horizon</p>
+                        <p className="text-2xl font-semibold">12-18 months</p>
+                        <p className="text-sm text-muted-foreground">Target period</p>
+                      </div>
+                    </div>
+
+                    {/* Executive Summary */}
+                    <div className="space-y-4 pt-6 border-t">
+                      <h2 className="text-2xl font-serif font-bold">Executive Summary</h2>
+                      <div className="prose prose-gray max-w-none">
+                        <p className="text-foreground leading-relaxed text-lg">
+                          Based on Damodaran valuation methodology, Tesla shows strong fundamentals in the growing EV market with solid execution on production targets. The company's vertical integration strategy and expanding energy business provide multiple value drivers beyond traditional automotive metrics.
+                        </p>
+                        <div className="flex items-center gap-4 mt-4 pt-4 border-t border-muted">
+                          <span className="text-sm text-muted-foreground">Analysis completed:</span>
+                          <span className="text-sm font-mono">15:42 minutes</span>
+                          <span className="text-sm text-muted-foreground">•</span>
+                          <span className="text-sm text-muted-foreground">Methodology:</span>
+                          <span className="text-sm font-medium">Damodaran DCF + Scenario Analysis</span>
+                        </div>
                       </div>
                     </div>
                   </div>
