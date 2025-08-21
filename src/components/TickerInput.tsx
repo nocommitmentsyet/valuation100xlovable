@@ -81,9 +81,7 @@ export const TickerInput = ({
       {/* Header */}
       <div className="text-center space-y-4">
         <div className="flex items-center justify-center gap-3">
-          <div className="p-3 bg-gradient-primary rounded-2xl shadow-hero">
-            <TrendingUp className="h-8 w-8 text-primary-foreground" />
-          </div>
+          
           <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">Valuation100x</h1>
         </div>
         <p className="text-lg text-muted-foreground">Get institutional-grade stock valuation reports in 15 minutes</p>
