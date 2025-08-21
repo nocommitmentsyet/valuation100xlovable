@@ -8,7 +8,7 @@ export const HeroSection = () => {
         Valuation100x
       </div>
       <p className="pt-6 text-lg sm:text-xl md:text-2xl text-muted-foreground w-full text-center max-w-3xl mx-auto px-4">
-        Institutional-grade stock analysis in 15 minutes using Damodaran methodology
+        Institutional-grade stock valuation in 15 minutes using Aswath Damodaran methodology
       </p>
       <Gravity gravity={{ x: 0, y: 0.8 }} className="w-full h-full" addTopWall={false}>
         <MatterBody
