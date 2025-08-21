@@ -37,7 +37,7 @@ const Index = () => {
         {appState === "input" && <>
             <HeroSection />
             
-            <div className="flex items-center justify-center min-h-[60vh] py-[84px]">
+            <div className="flex items-center justify-center min-h-[60vh] py-16">
               <TickerInput onStartAnalysis={handleStartAnalysis} />
             </div>
             
