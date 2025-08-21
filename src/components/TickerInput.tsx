@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Search, TrendingUp } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 interface CompanyPreview {
   symbol: string;
   name: string;
@@ -18,6 +19,8 @@ export const TickerInput = ({
   const [ticker, setTicker] = useState("");
   const [preview, setPreview] = useState<CompanyPreview | null>(null);
   const [isValidating, setIsValidating] = useState(false);
+  const [isStartingAnalysis, setIsStartingAnalysis] = useState(false);
+  const { toast } = useToast();
   const mockPreview = (symbol: string): CompanyPreview => {
     const mockData: Record<string, CompanyPreview> = {
       "TSLA": {
@@ -72,9 +75,81 @@ export const TickerInput = ({
       setPreview(null);
     }
   };
-  const handleSubmit = () => {
-    if (ticker && preview) {
+  const validateTicker = async (tickerSymbol: string) => {
+    try {
+      const response = await fetch(`https://valuation100x-production.up.railway.app/api/validate/ticker/${tickerSymbol}`);
+      const data = await response.json();
+      return data.is_valid;
+    } catch (error) {
+      console.error('Validation API error:', error);
+      // Fallback to mock validation for known tickers
+      const knownTickers = ["TSLA", "AAPL", "MSFT", "GOOGL", "NVDA"];
+      return knownTickers.includes(tickerSymbol);
+    }
+  };
+
+  const startComprehensiveAnalysis = async (tickerSymbol: string) => {
+    try {
+      const response = await fetch('https://valuation100x-production.up.railway.app/api/analysis/comprehensive/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ticker: tickerSymbol
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Analysis API error: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Analysis API error:', error);
+      throw error;
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!ticker || !preview || isStartingAnalysis) return;
+    
+    setIsStartingAnalysis(true);
+    
+    try {
+      // First validate the ticker
+      const isValid = await validateTicker(ticker);
+      
+      if (!isValid) {
+        toast({
+          title: "Invalid ticker symbol",
+          description: "Please enter a valid stock ticker symbol.",
+          variant: "destructive",
+        });
+        setIsStartingAnalysis(false);
+        return;
+      }
+
+      // Start comprehensive analysis
+      await startComprehensiveAnalysis(ticker);
+      
+      toast({
+        title: "Analysis Started",
+        description: `Starting comprehensive analysis for ${ticker}`,
+      });
+      
+      // Proceed to analysis view
       onStartAnalysis(ticker);
+      
+    } catch (error) {
+      toast({
+        title: "Analysis Failed",
+        description: "Unable to start analysis. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsStartingAnalysis(false);
     }
   };
   return <div className="w-full max-w-2xl mx-auto space-y-6">
@@ -117,8 +192,12 @@ export const TickerInput = ({
             </div>}
 
           {/* Start Analysis Button */}
-          <Button onClick={handleSubmit} disabled={!preview || isValidating} className="w-full h-14 text-lg bg-gradient-primary hover:opacity-90 transition-smooth shadow-floating disabled:opacity-100 disabled:bg-gradient-primary">
-            Start Deep Analysis
+          <Button 
+            onClick={handleSubmit} 
+            disabled={!preview || isValidating || isStartingAnalysis} 
+            className="w-full h-14 text-lg bg-gradient-primary hover:opacity-90 transition-smooth shadow-floating disabled:opacity-100 disabled:bg-gradient-primary"
+          >
+            {isStartingAnalysis ? "Starting Analysis..." : "Start Deep Analysis"}
           </Button>
         </div>
       </Card>
