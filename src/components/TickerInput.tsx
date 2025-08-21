@@ -86,9 +86,7 @@ export const TickerInput = ({
           </div>
           <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">Valuation100x</h1>
         </div>
-        <p className="text-lg text-muted-foreground">
-          Get institutional-grade equity research in 15 minutes
-        </p>
+        <p className="text-lg text-muted-foreground">Get institutional-grade stock valuation reports in 15 minutes</p>
       </div>
 
       {/* Input Section */}
