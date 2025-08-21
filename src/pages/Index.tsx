@@ -4,6 +4,7 @@ import { ProgressTracker } from "@/components/ProgressTracker";
 import { ResearchReport } from "@/components/ResearchReport";
 import { Navigation } from "@/components/Navigation";
 import { Component as AnimatedTestimonials } from "@/components/ui/testimonial";
+import { HeroSection } from "@/components/HeroSection";
 type AppState = "input" | "analysis" | "report";
 interface ReportData {
   ticker: string;
@@ -34,7 +35,9 @@ const Index = () => {
       <Navigation />
       <div className="container mx-auto px-4 py-8 pt-24">
         {appState === "input" && <>
-            <div className="flex items-center justify-center min-h-[80vh] py-[30px]">
+            <HeroSection />
+            
+            <div className="flex items-center justify-center min-h-[60vh] py-16">
               <TickerInput onStartAnalysis={handleStartAnalysis} />
             </div>
             
