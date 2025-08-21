@@ -88,29 +88,6 @@ export const TickerInput = ({
     }
   };
 
-  const startComprehensiveAnalysis = async (tickerSymbol: string) => {
-    try {
-      const response = await fetch('https://valuation100x-production.up.railway.app/api/analysis/comprehensive/start', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ticker: tickerSymbol
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Analysis API error: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('Analysis API error:', error);
-      throw error;
-    }
-  };
 
   const handleSubmit = async () => {
     if (!ticker || !preview || isStartingAnalysis) return;
@@ -131,9 +108,6 @@ export const TickerInput = ({
         return;
       }
 
-      // Start comprehensive analysis
-      await startComprehensiveAnalysis(ticker);
-      
       toast({
         title: "Analysis Started",
         description: `Starting comprehensive analysis for ${ticker}`,

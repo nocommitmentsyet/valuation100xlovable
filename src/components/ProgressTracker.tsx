@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Clock, CheckCircle, Loader2, FileText, Calculator, Brain, TrendingUp, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Clock, CheckCircle, Loader2, FileText, Calculator, Brain, TrendingUp, AlertCircle, X } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface AnalysisStep {
   id: string;
@@ -24,6 +26,11 @@ export const ProgressTracker = ({ ticker, onComplete }: ProgressTrackerProps) =>
   const [progress, setProgress] = useState(0);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState(15 * 60); // 15 minutes in seconds
+  const [analysisId, setAnalysisId] = useState<string | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const { toast } = useToast();
+  const wsRef = useRef<WebSocket | null>(null);
+  const statusPollingRef = useRef<NodeJS.Timeout | null>(null);
 
   const steps: AnalysisStep[] = [
     {
@@ -89,89 +96,157 @@ export const ProgressTracker = ({ ticker, onComplete }: ProgressTrackerProps) =>
     return () => clearInterval(timer);
   }, [currentStep, analysisSteps, timeElapsed]);
 
+  // Get analysis ID from TickerInput component
   useEffect(() => {
-    // Simulate the analysis process
-    const runAnalysis = async () => {
-      for (let i = 0; i < analysisSteps.length; i++) {
-        // Mark current step as running
-        setCurrentStep(i);
-        setAnalysisSteps(prev => prev.map((step, index) => ({
-          ...step,
-          status: index === i ? "running" : index < i ? "completed" : "pending"
-        })));
-
-        // Simulate step execution with logs
-        await new Promise(resolve => {
-          const stepDuration = analysisSteps[i].estimatedTime * 1000;
-          const logInterval = stepDuration / 3;
-          
-          let logCount = 0;
-          const logTimer = setInterval(() => {
-            const mockLogs = {
-              "data-collection": [
-                "Fetching 10-K and 10-Q filings from SEC EDGAR...",
-                "Downloading quarterly financial statements...",
-                "Collecting real-time market data and analyst estimates..."
-              ],
-              "financial-analysis": [
-                "Processing income statement trends over 5 years...",
-                "Analyzing balance sheet strength and debt levels...",
-                "Calculating key financial ratios and metrics..."
-              ],
-              "story-building": [
-                "Identifying primary growth drivers and competitive moats...",
-                "Analyzing market opportunity and addressable market...",
-                "Building Damodaran-style growth narrative..."
-              ],
-              "valuation": [
-                "Running DCF model with multiple scenarios...",
-                "Performing sensitivity analysis on key assumptions...",
-                "Calculating intrinsic value and margin of safety..."
-              ]
-            };
-
-            const logs = mockLogs[analysisSteps[i].id as keyof typeof mockLogs] || [];
-            
-            if (logCount < logs.length) {
-              setAnalysisSteps(prev => prev.map((step, index) => ({
-                ...step,
-                logs: index === i ? [...step.logs, logs[logCount]] : step.logs
-              })));
-              logCount++;
-            } else {
-              clearInterval(logTimer);
-            }
-          }, logInterval);
-
-          setTimeout(() => {
-            clearInterval(logTimer);
-            resolve(void 0);
-          }, stepDuration);
+    const startAnalysis = async () => {
+      try {
+        const response = await fetch('https://valuation100x-production.up.railway.app/api/analysis/comprehensive/start', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            ticker: ticker
+          })
         });
-
-        // Mark step as completed
-        setAnalysisSteps(prev => prev.map((step, index) => ({
-          ...step,
-          status: index === i ? "completed" : step.status
-        })));
+        
+        if (!response.ok) {
+          throw new Error(`Analysis API error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        setAnalysisId(data.analysis_id);
+        
+        // Start status polling
+        startStatusPolling(data.analysis_id);
+        
+      } catch (error) {
+        console.error('Failed to start analysis:', error);
+        toast({
+          title: "Analysis Failed",
+          description: "Unable to start analysis. Please try again.",
+          variant: "destructive",
+        });
       }
-
-      // Complete the analysis
-      setProgress(100);
-      setTimeout(() => {
-        onComplete({
-          ticker,
-          recommendation: "Buy",
-          intrinsicValue: 285.50,
-          currentPrice: 248.42,
-          upside: 14.9,
-          confidence: "High"
-        });
-      }, 1000);
     };
 
-    runAnalysis();
-  }, [ticker, onComplete, analysisSteps]);
+    startAnalysis();
+    
+    return () => {
+      // Cleanup
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+      if (statusPollingRef.current) {
+        clearInterval(statusPollingRef.current);
+      }
+    };
+  }, [ticker, toast]);
+
+  const startStatusPolling = (id: string) => {
+    statusPollingRef.current = setInterval(async () => {
+      try {
+        const response = await fetch(`https://valuation100x-production.up.railway.app/api/analysis/${id}/status`);
+        const data = await response.json();
+        
+        updateAnalysisState(data);
+        
+        // If analysis is complete, get results
+        if (data.status === 'completed') {
+          const resultsResponse = await fetch(`https://valuation100x-production.up.railway.app/api/analysis/${id}/results`);
+          const results = await resultsResponse.json();
+          
+          setProgress(100);
+          onComplete(results);
+          
+          if (statusPollingRef.current) {
+            clearInterval(statusPollingRef.current);
+          }
+        }
+        
+        // If analysis failed, stop polling
+        if (data.status === 'failed' || data.status === 'cancelled') {
+          if (statusPollingRef.current) {
+            clearInterval(statusPollingRef.current);
+          }
+          
+          toast({
+            title: data.status === 'cancelled' ? "Analysis Cancelled" : "Analysis Failed",
+            description: data.error_message || "The analysis was stopped.",
+            variant: "destructive",
+          });
+        }
+        
+      } catch (error) {
+        console.error('Status polling error:', error);
+      }
+    }, 2000); // Poll every 2 seconds
+  };
+
+  const updateAnalysisState = (statusData: any) => {
+    // Map API status to our step structure
+    const stepMapping: Record<string, number> = {
+      'data-collection': 0,
+      'financial-analysis': 1,
+      'story-building': 2,
+      'valuation': 3
+    };
+
+    const currentStepIndex = stepMapping[statusData.current_step] ?? 0;
+    setCurrentStep(currentStepIndex);
+
+    // Update progress
+    setProgress(statusData.progress_percentage || 0);
+
+    // Update steps status
+    setAnalysisSteps(prev => prev.map((step, index) => {
+      if (index < currentStepIndex) {
+        return { ...step, status: "completed" as const };
+      } else if (index === currentStepIndex) {
+        return { 
+          ...step, 
+          status: "running" as const,
+          logs: statusData.logs || step.logs
+        };
+      } else {
+        return { ...step, status: "pending" as const };
+      }
+    }));
+  };
+
+  const cancelAnalysis = async () => {
+    if (!analysisId || isCancelling) return;
+
+    setIsCancelling(true);
+    
+    try {
+      const response = await fetch(`https://valuation100x-production.up.railway.app/api/analysis/${analysisId}/cancel`, {
+        method: 'DELETE'
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Analysis Cancelled",
+          description: "The analysis has been stopped successfully.",
+        });
+        
+        // Clear polling
+        if (statusPollingRef.current) {
+          clearInterval(statusPollingRef.current);
+        }
+      } else {
+        throw new Error('Failed to cancel analysis');
+      }
+    } catch (error) {
+      toast({
+        title: "Cancel Failed",
+        description: "Unable to cancel the analysis. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -196,10 +271,24 @@ export const ProgressTracker = ({ ticker, onComplete }: ProgressTrackerProps) =>
     <div className="w-full max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="text-center space-y-4">
-        <h1 className="text-3xl font-bold">Analyzing {ticker}</h1>
-        <p className="text-muted-foreground">
-          Generating institutional-grade research report using Damodaran methodology
-        </p>
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold">Analyzing {ticker}</h1>
+            <p className="text-muted-foreground">
+              Generating institutional-grade research report using Damodaran methodology
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={cancelAnalysis}
+            disabled={isCancelling || !analysisId}
+            className="flex items-center gap-2"
+          >
+            <X className="h-4 w-4" />
+            {isCancelling ? "Cancelling..." : "Cancel Analysis"}
+          </Button>
+        </div>
       </div>
 
       {/* Progress Overview */}
