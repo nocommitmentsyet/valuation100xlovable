@@ -544,11 +544,7 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
       <GravityContext.Provider value={{ registerElement, unregisterElement }}>
         <div
           ref={canvas}
-          className={cn(className, "relative w-full h-full")}
-          style={{ 
-            pointerEvents: "auto",
-            touchAction: "pan-y" // Allow vertical scrolling but capture horizontal drags
-          }}
+          className={cn(className, "absolute top-0 left-0 w-full h-full")}
           {...props}
         >
           {children}
