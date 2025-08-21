@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -21,6 +22,7 @@ export const TickerInput = ({
   const [isValidating, setIsValidating] = useState(false);
   const [isStartingAnalysis, setIsStartingAnalysis] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
   const mockPreview = (symbol: string): CompanyPreview => {
     const mockData: Record<string, CompanyPreview> = {
       "TSLA": {
@@ -108,13 +110,31 @@ export const TickerInput = ({
         return;
       }
 
+      // Start the analysis via API
+      const response = await fetch(
+        'https://valuation100x-production.up.railway.app/api/analysis/comprehensive/start',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ ticker }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to start analysis');
+      }
+
+      const analysisData = await response.json();
+      
       toast({
         title: "Analysis Started",
         description: `Starting comprehensive analysis for ${ticker}`,
       });
       
-      // Proceed to analysis view
-      onStartAnalysis(ticker);
+      // Navigate to analysis progress page
+      navigate(`/analysis/${analysisData.analysis_id}`);
       
     } catch (error) {
       toast({
