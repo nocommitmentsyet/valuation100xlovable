@@ -322,9 +322,9 @@ ${reportData.detailed_analysis.risks.map(risk => `- ${risk}`).join('\n')}
                 </div>
                 
                 <div className="text-center">
-                  <div className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-xl ${getRecommendationColor(reportData.recommendation)}`}>
-                    {getRecommendationIcon(reportData.recommendation)}
-                    {reportData.recommendation.toUpperCase()}
+                <div className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-xl ${getRecommendationColor(reportData.recommendation)}`}>
+                  {getRecommendationIcon(reportData.recommendation)}
+                  {reportData.recommendation?.toUpperCase() || 'LOADING'}
                   </div>
                   <p className="text-sm text-muted-foreground mt-2">{reportData.confidence} Confidence</p>
                 </div>
