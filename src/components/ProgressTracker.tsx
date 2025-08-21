@@ -193,6 +193,12 @@ export const ProgressTracker = ({ ticker, onComplete }: ProgressTrackerProps) =>
       case "analysis_error":
         handleAnalysisError(message);
         break;
+      case "heartbeat":
+        // Do nothing for heartbeat
+        break;
+      case "connection_established":
+        console.log('Live tracking started');
+        break;
       default:
         console.log('Unknown message type:', message.type);
     }
@@ -351,7 +357,7 @@ export const ProgressTracker = ({ ticker, onComplete }: ProgressTrackerProps) =>
             size="sm"
             onClick={cancelAnalysis}
             disabled={isCancelling || !analysisId}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
           >
             <X className="h-4 w-4" />
             {isCancelling ? "Cancelling..." : "Cancel Analysis"}
