@@ -82,7 +82,7 @@ export const TickerInput = ({
       <div className="text-center space-y-4">
         <div className="flex items-center justify-center gap-3">
           
-          <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">Get institutional-grade stock valuation reports in 15 minutes</h1>
+          <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">Enter Stock Ticker</h1>
         </div>
         <p className="text-lg text-muted-foreground">Get institutional-grade stock valuation reports in 15 minutes</p>
       </div>
