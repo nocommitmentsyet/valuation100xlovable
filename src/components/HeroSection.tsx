@@ -9,7 +9,7 @@ export const HeroSection = () => {
       <p className="pt-6 text-lg sm:text-xl md:text-2xl text-muted-foreground w-full text-center max-w-3xl mx-auto px-4">
         Institutional-grade stock analysis in 15 minutes using Damodaran methodology
       </p>
-      <Gravity gravity={{ x: 0, y: 0.8 }} className="w-full h-full" addTopWall={false}>
+      <Gravity gravity={{ x: 0, y: 0.8 }} className="absolute inset-0 w-full h-full" addTopWall={false}>
         <MatterBody
           matterBodyOptions={{ friction: 0.3, restitution: 0.4, density: 0.002 }}
           x="20%"
