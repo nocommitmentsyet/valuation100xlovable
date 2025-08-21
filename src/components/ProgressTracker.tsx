@@ -28,9 +28,11 @@ export const ProgressTracker = ({ ticker, onComplete }: ProgressTrackerProps) =>
   const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState(15 * 60); // 15 minutes in seconds
   const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [analysisStatus, setAnalysisStatus] = useState<'running' | 'cancelled' | 'completed' | 'error'>('running');
   const { toast } = useToast();
   const wsRef = useRef<WebSocket | null>(null);
   const statusPollingRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const steps: AnalysisStep[] = [
     {
@@ -74,7 +76,10 @@ export const ProgressTracker = ({ ticker, onComplete }: ProgressTrackerProps) =>
   const [analysisSteps, setAnalysisSteps] = useState(steps);
 
   useEffect(() => {
-    const timer = setInterval(() => {
+    // Only run timer if analysis is running
+    if (analysisStatus !== 'running') return;
+
+    timerRef.current = setInterval(() => {
       setTimeElapsed(prev => prev + 1);
       
       // Update progress based on current step
@@ -93,8 +98,12 @@ export const ProgressTracker = ({ ticker, onComplete }: ProgressTrackerProps) =>
       }
     }, 1000);
 
-    return () => clearInterval(timer);
-  }, [currentStep, analysisSteps, timeElapsed]);
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [currentStep, analysisSteps, timeElapsed, analysisStatus]);
 
   // Get analysis ID from TickerInput component
   useEffect(() => {
@@ -140,6 +149,9 @@ export const ProgressTracker = ({ ticker, onComplete }: ProgressTrackerProps) =>
       if (statusPollingRef.current) {
         clearInterval(statusPollingRef.current);
       }
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
     };
   }, [ticker, toast]);
 
@@ -180,6 +192,9 @@ export const ProgressTracker = ({ ticker, onComplete }: ProgressTrackerProps) =>
   };
 
   const handleWebSocketMessage = (message: any) => {
+    // Don't process messages if analysis was cancelled
+    if (analysisStatus === 'cancelled') return;
+
     switch (message.type) {
       case "progress_update":
         handleProgressUpdate(message);
@@ -256,6 +271,7 @@ export const ProgressTracker = ({ ticker, onComplete }: ProgressTrackerProps) =>
   };
 
   const handleAnalysisCompleted = async (message: any) => {
+    setAnalysisStatus('completed');
     setProgress(100);
     
     // Mark all steps as completed
@@ -273,6 +289,7 @@ export const ProgressTracker = ({ ticker, onComplete }: ProgressTrackerProps) =>
   };
 
   const handleAnalysisError = (message: any) => {
+    setAnalysisStatus('error');
     toast({
       title: "Analysis Failed",
       description: message.error || "An error occurred during analysis.",
@@ -299,6 +316,22 @@ export const ProgressTracker = ({ ticker, onComplete }: ProgressTrackerProps) =>
       });
       
       if (response.ok) {
+        // Set analysis status to cancelled
+        setAnalysisStatus('cancelled');
+        
+        // Clear timer
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+        }
+        
+        // Update step statuses - mark running steps as cancelled, keep completed ones
+        setAnalysisSteps(prev => prev.map(step => {
+          if (step.status === "running") {
+            return { ...step, status: "pending" as const };
+          }
+          return step;
+        }));
+        
         toast({
           title: "Analysis Cancelled",
           description: "The analysis has been stopped successfully.",
@@ -379,23 +412,34 @@ export const ProgressTracker = ({ ticker, onComplete }: ProgressTrackerProps) =>
       {/* Progress Overview */}
       <Card className="p-6 shadow-floating">
         <div className="space-y-4">
+          {analysisStatus === 'cancelled' && (
+            <div className="text-center p-4 bg-muted rounded-lg">
+              <span className="text-lg font-semibold text-muted-foreground">Analysis Cancelled</span>
+              <p className="text-sm text-muted-foreground mt-1">The analysis was stopped by user request</p>
+            </div>
+          )}
+          
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Clock className="h-5 w-5 text-muted-foreground" />
               <span className="font-medium">Time Elapsed: {formatTime(timeElapsed)}</span>
             </div>
-            <div className="text-right">
-              <span className="text-sm text-muted-foreground">
-                Est. Remaining: {formatTime(estimatedTimeRemaining)}
-              </span>
-            </div>
+            {analysisStatus === 'running' && (
+              <div className="text-right">
+                <span className="text-sm text-muted-foreground">
+                  Est. Remaining: {formatTime(estimatedTimeRemaining)}
+                </span>
+              </div>
+            )}
           </div>
           
           <Progress value={progress} className="h-3" />
           
           <div className="text-center">
             <span className="text-2xl font-bold text-primary">{Math.round(progress)}%</span>
-            <span className="text-muted-foreground ml-2">Complete</span>
+            <span className="text-muted-foreground ml-2">
+              {analysisStatus === 'cancelled' ? 'Stopped' : 'Complete'}
+            </span>
           </div>
         </div>
       </Card>
