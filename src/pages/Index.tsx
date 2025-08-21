@@ -2,6 +2,8 @@ import { useState } from "react";
 import { TickerInput } from "@/components/TickerInput";
 import { ProgressTracker } from "@/components/ProgressTracker";
 import { ResearchReport } from "@/components/ResearchReport";
+import { Navigation } from "@/components/Navigation";
+import { Component as AnimatedTestimonials } from "@/components/ui/testimonial";
 
 type AppState = "input" | "analysis" | "report";
 
@@ -37,7 +39,8 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-subtle">
-      <div className="container mx-auto px-4 py-8">
+      <Navigation />
+      <div className="container mx-auto px-4 py-8 pt-24">
         {appState === "input" && (
           <>
             <div className="flex items-center justify-center min-h-[80vh]">
@@ -77,8 +80,8 @@ const Index = () => {
             {/* Example Report Preview */}
             <section className="py-20 bg-muted/30">
               <div className="container mx-auto px-4">
-                <h2 className="text-4xl font-bold text-center mb-4">Example Report Preview</h2>
-                <p className="text-center text-muted-foreground mb-16 text-lg">See what you'll receive after our 15-minute analysis</p>
+                <h2 className="text-3xl font-bold text-center mb-4">Example Report Preview</h2>
+                <p className="text-center text-muted-foreground mb-16">See what you'll receive after our 15-minute analysis</p>
                 
                 <div className="max-w-5xl mx-auto">
                   <div className="bg-background rounded-xl border shadow-elegant p-12 space-y-8">
@@ -190,19 +193,10 @@ const Index = () => {
             </section>
 
             {/* Testimonials */}
-            <section className="py-16">
+            <section className="py-16 bg-background">
               <div className="container mx-auto px-4">
                 <h2 className="text-3xl font-bold text-center mb-12">What Users Say</h2>
-                <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                  <div className="bg-card rounded-lg border shadow-card p-6">
-                    <p className="text-muted-foreground mb-4">"This saved me 10+ hours per stock. The report feels like it came from a research desk."</p>
-                    <p className="font-semibold">— Retail Investor</p>
-                  </div>
-                  <div className="bg-card rounded-lg border shadow-card p-6">
-                    <p className="text-muted-foreground mb-4">"The valuation logic is transparent and trustworthy."</p>
-                    <p className="font-semibold">— Finance Enthusiast</p>
-                  </div>
-                </div>
+                <AnimatedTestimonials />
               </div>
             </section>
 
