@@ -545,7 +545,10 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
         <div
           ref={canvas}
           className={cn(className, "relative w-full h-full")}
-          style={{ pointerEvents: "none" }}
+          style={{ 
+            pointerEvents: "auto",
+            touchAction: "pan-y" // Allow vertical scrolling but capture horizontal drags
+          }}
           {...props}
         >
           {children}
