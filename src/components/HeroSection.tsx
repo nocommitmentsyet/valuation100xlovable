@@ -1,15 +1,22 @@
 import { Gravity, MatterBody } from "@/components/ui/gravity";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, TrendingUp } from "lucide-react";
 
 export const HeroSection = () => {
   return (
     <div className="w-full min-h-[80vh] relative overflow-hidden bg-gradient-subtle">
-      <div className="pt-32 text-5xl sm:text-6xl md:text-7xl lg:text-8xl text-foreground w-full text-center font-bold">
-        Valuation100x
+      <div className="pt-32 text-center space-y-6 relative z-10">
+        <div className="flex items-center justify-center gap-4">
+          <div className="p-4 bg-gradient-primary rounded-2xl shadow-hero">
+            <TrendingUp className="h-12 w-12 sm:h-16 sm:w-16 text-primary-foreground" />
+          </div>
+          <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+            Valuation100x
+          </h1>
+        </div>
+        <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground max-w-4xl mx-auto px-4">
+          Get institutional-grade stock valuation reports in 15 minutes
+        </p>
       </div>
-      <p className="pt-6 text-lg sm:text-xl md:text-2xl text-muted-foreground w-full text-center max-w-3xl mx-auto px-4">
-        Institutional-grade stock valuation in 15 minutes using Aswath Damodaran methodology
-      </p>
       <Gravity gravity={{ x: 0, y: 0.8 }} className="w-full h-full" addTopWall={false}>
         <MatterBody
           matterBodyOptions={{ friction: 0.3, restitution: 0.4, density: 0.002 }}
