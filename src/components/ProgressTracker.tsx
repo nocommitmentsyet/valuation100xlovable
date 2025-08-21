@@ -304,14 +304,25 @@ export const ProgressTracker = ({ ticker, onComplete }: ProgressTrackerProps) =>
           description: "The analysis has been stopped successfully.",
         });
         
-        // Clear polling
+        // Clear polling and close WebSocket
         if (statusPollingRef.current) {
           clearInterval(statusPollingRef.current);
         }
+        if (wsRef.current) {
+          wsRef.current.close();
+        }
+      } else if (response.status === 400) {
+        const errorData = await response.json();
+        toast({
+          title: "Cannot Cancel",
+          description: errorData.detail || "Analysis is not running or already completed.",
+          variant: "destructive",
+        });
       } else {
         throw new Error('Failed to cancel analysis');
       }
     } catch (error) {
+      console.error('Cancel analysis error:', error);
       toast({
         title: "Cancel Failed",
         description: "Unable to cancel the analysis. Please try again.",
