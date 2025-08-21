@@ -91,9 +91,6 @@ export const TickerInput = ({
       <Card className="p-8 shadow-floating border-0 bg-gradient-subtle">
         <div className="space-y-6">
           <div className="space-y-2">
-            <label htmlFor="ticker" className="text-sm font-medium text-foreground">
-              Enter Stock Ticker
-            </label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input id="ticker" value={ticker} onChange={e => handleTickerChange(e.target.value)} placeholder="e.g., TSLA, AAPL, MSFT" className="pl-10 h-14 text-lg border-2 transition-smooth focus:border-primary" autoComplete="off" />
@@ -120,7 +117,7 @@ export const TickerInput = ({
             </div>}
 
           {/* Start Analysis Button */}
-          <Button onClick={handleSubmit} disabled={!preview || isValidating} className="w-full h-14 text-lg bg-gradient-primary hover:opacity-90 transition-smooth shadow-floating">
+          <Button onClick={handleSubmit} disabled={!preview || isValidating} className="w-full h-14 text-lg bg-gradient-primary hover:opacity-90 transition-smooth shadow-floating disabled:opacity-100 disabled:bg-gradient-primary">
             Start Deep Analysis
           </Button>
         </div>
