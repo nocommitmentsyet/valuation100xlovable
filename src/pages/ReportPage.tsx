@@ -37,8 +37,12 @@ const ReportPage = () => {
         throw new Error(`Failed to fetch report: ${response.status}`);
       }
 
-      const data = await response.json();
-      setReportData(data);
+      const markdownContent = await response.text();
+      setReportData({
+        markdown_content: markdownContent,
+        ticker: "AAPL", // You might want to extract this from the content or get it separately
+        company_name: "Apple Inc." // Same here
+      });
       setError(null);
     } catch (err) {
       console.error('Error fetching report:', err);
