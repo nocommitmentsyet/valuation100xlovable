@@ -3,21 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Search, TrendingUp } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 interface CompanyPreview {
   symbol: string;
   name: string;
   sector: string;
   price: string;
-}
-
-interface ValidationResponse {
-  is_valid: boolean;
-  symbol: string;
-  name?: string;
-  sector?: string;
-  current_price?: number;
-  error?: string;
 }
 interface TickerInputProps {
   onStartAnalysis: (ticker: string) => void;
@@ -28,70 +18,64 @@ export const TickerInput = ({
   const [ticker, setTicker] = useState("");
   const [preview, setPreview] = useState<CompanyPreview | null>(null);
   const [isValidating, setIsValidating] = useState(false);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const { toast } = useToast();
-  const validateTicker = async (symbol: string): Promise<ValidationResponse | null> => {
-    try {
-      const response = await fetch(`https://valuation100x-production.up.railway.app/api/validate/ticker/${symbol}`);
-      
-      if (!response.ok) {
-        return null;
+  const mockPreview = (symbol: string): CompanyPreview => {
+    const mockData: Record<string, CompanyPreview> = {
+      "TSLA": {
+        symbol: "TSLA",
+        name: "Tesla, Inc.",
+        sector: "Consumer Discretionary",
+        price: "$248.42"
+      },
+      "AAPL": {
+        symbol: "AAPL",
+        name: "Apple Inc.",
+        sector: "Technology",
+        price: "$192.53"
+      },
+      "MSFT": {
+        symbol: "MSFT",
+        name: "Microsoft Corporation",
+        sector: "Technology",
+        price: "$421.78"
+      },
+      "GOOGL": {
+        symbol: "GOOGL",
+        name: "Alphabet Inc.",
+        sector: "Communication Services",
+        price: "$141.52"
+      },
+      "NVDA": {
+        symbol: "NVDA",
+        name: "NVIDIA Corporation",
+        sector: "Technology",
+        price: "$462.89"
       }
-      
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('Validation API error:', error);
-      return null;
-    }
+    };
+    return mockData[symbol] || {
+      symbol,
+      name: `${symbol} Corporation`,
+      sector: "Unknown",
+      price: "$0.00"
+    };
   };
   const handleTickerChange = async (value: string) => {
     const upperValue = value.toUpperCase();
     setTicker(upperValue);
-    
     if (upperValue.length >= 2) {
       setIsValidating(true);
-      
-      const validationResult = await validateTicker(upperValue);
-      
-      if (validationResult?.is_valid) {
-        setPreview({
-          symbol: validationResult.symbol,
-          name: validationResult.name || `${upperValue} Corporation`,
-          sector: validationResult.sector || "Unknown",
-          price: validationResult.current_price ? `$${validationResult.current_price.toFixed(2)}` : "$0.00"
-        });
-      } else {
-        setPreview(null);
-      }
-      
-      setIsValidating(false);
+      // Simulate API call delay
+      setTimeout(() => {
+        setPreview(mockPreview(upperValue));
+        setIsValidating(false);
+      }, 500);
     } else {
       setPreview(null);
     }
   };
-
-  const handleSubmit = async () => {
-    if (!ticker) return;
-    
-    setIsAnalyzing(true);
-    
-    // Validate ticker before starting analysis
-    const validationResult = await validateTicker(ticker);
-    
-    if (validationResult?.is_valid) {
-      // Proceed with analysis
+  const handleSubmit = () => {
+    if (ticker && preview) {
       onStartAnalysis(ticker);
-    } else {
-      // Show error toast
-      toast({
-        variant: "destructive",
-        title: "Invalid ticker symbol",
-        description: "Please enter a valid stock ticker symbol."
-      });
     }
-    
-    setIsAnalyzing(false);
   };
   return <div className="w-full max-w-2xl mx-auto space-y-6">
       {/* Header */}
@@ -133,8 +117,8 @@ export const TickerInput = ({
             </div>}
 
           {/* Start Analysis Button */}
-          <Button onClick={handleSubmit} disabled={!ticker || isValidating || isAnalyzing} className="w-full h-14 text-lg bg-gradient-primary hover:opacity-90 transition-smooth shadow-floating disabled:opacity-100 disabled:bg-gradient-primary">
-            {isAnalyzing ? "Validating & Starting Analysis..." : "Start Deep Analysis"}
+          <Button onClick={handleSubmit} disabled={!preview || isValidating} className="w-full h-14 text-lg bg-gradient-primary hover:opacity-90 transition-smooth shadow-floating disabled:opacity-100 disabled:bg-gradient-primary">
+            Start Deep Analysis
           </Button>
         </div>
       </Card>
