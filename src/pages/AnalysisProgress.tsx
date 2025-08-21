@@ -8,10 +8,9 @@ import { ArrowLeft, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ProgressMessage {
-  id: string;
   timestamp: string;
   message: string;
-  percentage?: number;
+  type: 'info' | 'progress' | 'success' | 'error' | 'warning';
 }
 
 const AnalysisProgress = () => {
@@ -20,145 +19,224 @@ const AnalysisProgress = () => {
   const { toast } = useToast();
   
   const [progress, setProgress] = useState(0);
-  const [messages, setMessages] = useState<ProgressMessage[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
-  const [hasError, setHasError] = useState(false);
+  const [progressMessages, setProgressMessages] = useState<ProgressMessage[]>([]);
+  const [connectionStatus, setConnectionStatus] = useState('Connecting');
+  const [webSocket, setWebSocket] = useState<WebSocket | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   
-  const wsRef = useRef<WebSocket | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const retryCount = useRef(0);
-  const maxRetries = 3;
+  const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const formatTimestamp = (date: Date) => {
-    return date.toLocaleTimeString('en-US', { 
-      hour12: false, 
-      hour: '2-digit', 
-      minute: '2-digit', 
-      second: '2-digit' 
-    });
-  };
-
-  const addMessage = (message: string, percentage?: number) => {
-    const newMessage: ProgressMessage = {
-      id: Math.random().toString(36).substr(2, 9),
-      timestamp: formatTimestamp(new Date()),
-      message,
-      percentage
-    };
-    
-    setMessages(prev => [...prev, newMessage]);
-    
-    // Auto-scroll to bottom
-    setTimeout(() => {
-      if (scrollAreaRef.current) {
-        const scrollElement = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
-        if (scrollElement) {
-          scrollElement.scrollTop = scrollElement.scrollHeight;
-        }
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      const scrollElement = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollElement) {
+        scrollElement.scrollTop = scrollElement.scrollHeight;
       }
-    }, 100);
-  };
+    }
+  }, [progressMessages]);
 
-  const connectWebSocket = () => {
-    if (!analysisId) return;
-
+  const startAnalysis = async (ticker: string) => {
     try {
-      const wsUrl = `wss://valuation100x-production.up.railway.app/ws/analysis/${analysisId}`;
-      wsRef.current = new WebSocket(wsUrl);
+      // 1. Start the analysis
+      const startResponse = await fetch('https://valuation100x-production.up.railway.app/api/analysis/comprehensive/start', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ticker: ticker.toUpperCase(),
+          user_preferences: {}
+        }),
+      });
 
-      wsRef.current.onopen = () => {
-        setIsConnected(true);
-        setHasError(false);
-        retryCount.current = 0;
-        addMessage("Connected to analysis stream...");
+      if (!startResponse.ok) {
+        throw new Error(`Failed to start analysis: ${startResponse.statusText}`);
+      }
+
+      const startData = await startResponse.json();
+      const newAnalysisId = startData.analysis_id;
+
+      // 2. Connect to WebSocket with proper error handling
+      const wsUrl = `wss://valuation100x-production.up.railway.app/ws/analysis/${newAnalysisId}`;
+      const ws = new WebSocket(wsUrl);
+
+      // Connection opened
+      ws.onopen = () => {
+        console.log('WebSocket connected successfully');
+        setConnectionStatus('Connected');
+        
+        // Send ping to keep connection alive
+        const pingInterval = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'ping' }));
+          } else {
+            clearInterval(pingInterval);
+          }
+        }, 30000); // Ping every 30 seconds
+        
+        pingIntervalRef.current = pingInterval;
       };
 
-      wsRef.current.onmessage = (event) => {
+      // Handle incoming messages
+      ws.onmessage = (event) => {
         try {
-          const data = JSON.parse(event.data);
-          
-          if (data.type === "progress") {
-            const percentage = data.data?.percentage || data.percentage;
-            const message = data.data?.message || data.message;
-            
-            if (percentage !== undefined) {
-              setProgress(percentage);
-            }
-            
-            if (message) {
-              addMessage(message, percentage);
-            }
-          } else if (data.type === "completion") {
-            addMessage("Analysis completed! Redirecting to report...");
-            setProgress(100);
-            
-            // Close WebSocket and redirect after a short delay
-            setTimeout(() => {
-              if (wsRef.current) {
-                wsRef.current.close();
-              }
-              navigate(`/report/${data.data?.analysis_id || analysisId}`);
-            }, 2000);
-          } else if (data.type === "error") {
-            addMessage(`Error: ${data.message || 'Analysis failed'}`);
-            setHasError(true);
+          const message = JSON.parse(event.data);
+          console.log('WebSocket message:', message);
+
+          switch (message.type) {
+            case 'connection_established':
+              setProgressMessages(prev => [...prev, {
+                timestamp: new Date().toLocaleTimeString(),
+                message: `Connected to analysis stream for ${ticker}`,
+                type: 'info'
+              }]);
+              break;
+
+            case 'progress_update':
+              setProgress(message.data.progress);
+              setProgressMessages(prev => [...prev, {
+                timestamp: new Date().toLocaleTimeString(),
+                message: message.data.step_description || `Progress: ${message.data.progress}%`,
+                type: 'progress'
+              }]);
+              break;
+
+            case 'analysis_log':
+              setProgressMessages(prev => [...prev, {
+                timestamp: new Date().toLocaleTimeString(),
+                message: message.data.message,
+                type: message.data.level.toLowerCase()
+              }]);
+              break;
+
+            case 'step_completed':
+              setProgressMessages(prev => [...prev, {
+                timestamp: new Date().toLocaleTimeString(),
+                message: `✅ Completed: ${message.data.completed_step}`,
+                type: 'success'
+              }]);
+              break;
+
+            case 'analysis_completed':
+              setProgress(100);
+              setProgressMessages(prev => [...prev, {
+                timestamp: new Date().toLocaleTimeString(),
+                message: `🎉 Analysis completed! Score: ${message.data.investment_score}/10`,
+                type: 'success'
+              }]);
+              
+              // Close WebSocket and redirect to results
+              ws.close();
+              setTimeout(() => {
+                window.location.href = `/report/${newAnalysisId}`;
+              }, 2000);
+              break;
+
+            case 'analysis_error':
+              setProgressMessages(prev => [...prev, {
+                timestamp: new Date().toLocaleTimeString(),
+                message: `❌ Error: ${message.data.error_message}`,
+                type: 'error'
+              }]);
+              break;
+
+            case 'pong':
+              // Keep-alive response
+              console.log('Received pong');
+              break;
+
+            case 'heartbeat':
+              // Heartbeat from server
+              console.log('Received heartbeat');
+              break;
+
+            default:
+              console.log('Unknown message type:', message.type);
           }
         } catch (error) {
           console.error('Error parsing WebSocket message:', error);
-          addMessage('Error parsing server message');
         }
       };
 
-      wsRef.current.onclose = (event) => {
-        setIsConnected(false);
+      // Connection closed
+      ws.onclose = (event) => {
+        console.log('WebSocket closed:', event.code, event.reason);
+        setConnectionStatus('Disconnected');
         
-        if (event.code !== 1000 && retryCount.current < maxRetries) {
-          // Unexpected closure, attempt to reconnect
-          retryCount.current++;
-          addMessage(`Connection lost. Retrying... (${retryCount.current}/${maxRetries})`);
+        if (pingIntervalRef.current) {
+          clearInterval(pingIntervalRef.current);
+        }
+        
+        if (event.code !== 1000) { // Not a normal closure
+          setProgressMessages(prev => [...prev, {
+            timestamp: new Date().toLocaleTimeString(),
+            message: `Connection closed unexpectedly (${event.code}). Checking results...`,
+            type: 'warning'
+          }]);
           
-          retryTimeoutRef.current = setTimeout(() => {
-            connectWebSocket();
-          }, 2000 * retryCount.current); // Exponential backoff
-        } else if (retryCount.current >= maxRetries) {
-          addMessage('Connection failed after multiple attempts. Please try again.');
-          setHasError(true);
+          // Try to fetch results after a delay
+          setTimeout(async () => {
+            try {
+              const resultsResponse = await fetch(`https://valuation100x-production.up.railway.app/api/analysis/${newAnalysisId}/results`);
+              if (resultsResponse.ok) {
+                window.location.href = `/report/${newAnalysisId}`;
+              }
+            } catch (error) {
+              console.error('Error checking results:', error);
+            }
+          }, 3000);
         }
       };
 
-      wsRef.current.onerror = (error) => {
+      // Connection error
+      ws.onerror = (error) => {
         console.error('WebSocket error:', error);
-        addMessage('Connection error occurred');
-        setHasError(true);
+        setConnectionStatus('Error');
+        setProgressMessages(prev => [...prev, {
+          timestamp: new Date().toLocaleTimeString(),
+          message: '❌ Connection error. Retrying...',
+          type: 'error'
+        }]);
       };
 
+      // Store WebSocket reference for cleanup
+      setWebSocket(ws);
+      
     } catch (error) {
-      console.error('Failed to create WebSocket:', error);
-      addMessage('Failed to connect to analysis stream');
-      setHasError(true);
+      console.error('Error starting analysis:', error);
+      setProgressMessages(prev => [...prev, {
+        timestamp: new Date().toLocaleTimeString(),
+        message: `❌ Failed to start analysis: ${error.message}`,
+        type: 'error'
+      }]);
     }
   };
 
-  const handleCancel = async () => {
-    if (!analysisId || isCancelling) return;
-    
-    setIsCancelling(true);
-    
-    try {
-      const response = await fetch(
-        `https://valuation100x-production.up.railway.app/api/analysis/${analysisId}/cancel`,
-        { method: 'DELETE' }
-      );
-      
-      if (response.ok) {
-        addMessage("Analysis cancelled by user");
+  // Cancel analysis function
+  const cancelAnalysis = async () => {
+    if (analysisId && webSocket) {
+      setIsCancelling(true);
+      try {
+        // Close WebSocket first
+        webSocket.close();
         
-        // Close WebSocket
-        if (wsRef.current) {
-          wsRef.current.close(1000, "User cancelled");
+        // Clear ping interval
+        if (pingIntervalRef.current) {
+          clearInterval(pingIntervalRef.current);
         }
+        
+        // Call cancel API
+        await fetch(`https://valuation100x-production.up.railway.app/api/analysis/${analysisId}/cancel`, {
+          method: 'DELETE'
+        });
+        
+        setProgressMessages(prev => [...prev, {
+          timestamp: new Date().toLocaleTimeString(),
+          message: '⚠️ Analysis cancelled by user',
+          type: 'warning'
+        }]);
         
         toast({
           title: "Analysis Cancelled",
@@ -169,21 +247,26 @@ const AnalysisProgress = () => {
         setTimeout(() => {
           navigate('/');
         }, 1500);
-      } else {
-        const errorData = await response.json();
-        addMessage(`Failed to cancel: ${errorData.detail || 'Unknown error'}`);
+        
+      } catch (error) {
+        console.error('Error cancelling analysis:', error);
+        setProgressMessages(prev => [...prev, {
+          timestamp: new Date().toLocaleTimeString(),
+          message: `❌ Failed to cancel analysis: ${error.message}`,
+          type: 'error'
+        }]);
+      } finally {
+        setIsCancelling(false);
       }
-    } catch (error) {
-      console.error('Cancel error:', error);
-      addMessage('Failed to cancel analysis');
-    } finally {
-      setIsCancelling(false);
     }
   };
 
   const handleBack = () => {
-    if (wsRef.current) {
-      wsRef.current.close(1000, "User navigated away");
+    if (webSocket) {
+      webSocket.close(1000, "User navigated away");
+    }
+    if (pingIntervalRef.current) {
+      clearInterval(pingIntervalRef.current);
     }
     navigate('/');
   };
@@ -194,15 +277,24 @@ const AnalysisProgress = () => {
       return;
     }
 
-    addMessage("Initializing analysis...");
-    connectWebSocket();
+    // Extract ticker from URL params if available, or use a default
+    const urlParams = new URLSearchParams(window.location.search);
+    const ticker = urlParams.get('ticker') || 'AAPL';
+    
+    setProgressMessages([{
+      timestamp: new Date().toLocaleTimeString(),
+      message: "Initializing analysis...",
+      type: 'info'
+    }]);
+    
+    startAnalysis(ticker);
 
     return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
+      if (webSocket) {
+        webSocket.close();
       }
-      if (retryTimeoutRef.current) {
-        clearTimeout(retryTimeoutRef.current);
+      if (pingIntervalRef.current) {
+        clearInterval(pingIntervalRef.current);
       }
     };
   }, [analysisId]);
@@ -211,7 +303,7 @@ const AnalysisProgress = () => {
     <div className="min-h-screen bg-gradient-subtle">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-8">
           <Button 
             onClick={handleBack}
             variant="outline" 
@@ -222,9 +314,9 @@ const AnalysisProgress = () => {
           </Button>
           
           <div className="flex items-center gap-2">
-            <div className={`w-3 h-3 rounded-full ${isConnected ? 'bg-success animate-pulse' : 'bg-muted'}`} />
+            <div className={`w-3 h-3 rounded-full ${connectionStatus === 'Connected' ? 'bg-success animate-pulse' : 'bg-muted'}`} />
             <span className="text-sm text-muted-foreground">
-              {isConnected ? 'Connected' : 'Connecting...'}
+              {connectionStatus}
             </span>
           </div>
         </div>
@@ -245,8 +337,8 @@ const AnalysisProgress = () => {
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Progress</h2>
                 <Button 
-                  onClick={handleCancel}
-                  disabled={isCancelling || hasError}
+                  onClick={cancelAnalysis}
+                  disabled={isCancelling}
                   variant="destructive"
                   size="sm"
                   className="flex items-center gap-2"
@@ -272,23 +364,25 @@ const AnalysisProgress = () => {
               
               <ScrollArea ref={scrollAreaRef} className="h-96 w-full border rounded-md p-4 bg-card">
                 <div className="space-y-3">
-                  {messages.map((msg) => (
-                    <div key={msg.id} className="flex items-start gap-3 text-sm">
+                  {progressMessages.map((msg, index) => (
+                    <div key={index} className="flex items-start gap-3 text-sm">
                       <span className="text-muted-foreground font-mono text-xs shrink-0 mt-0.5">
                         {msg.timestamp}
                       </span>
                       <div className="flex-1">
-                        <span className="text-foreground">{msg.message}</span>
-                        {msg.percentage !== undefined && (
-                          <span className="ml-2 text-primary font-medium">
-                            ({msg.percentage}%)
-                          </span>
-                        )}
+                        <span className={`text-foreground ${
+                          msg.type === 'error' ? 'text-destructive' : 
+                          msg.type === 'success' ? 'text-success' : 
+                          msg.type === 'warning' ? 'text-warning' : 
+                          'text-foreground'
+                        }`}>
+                          {msg.message}
+                        </span>
                       </div>
                     </div>
                   ))}
                   
-                  {messages.length === 0 && (
+                  {progressMessages.length === 0 && (
                     <div className="text-center text-muted-foreground py-8">
                       Waiting for updates...
                     </div>
@@ -299,7 +393,7 @@ const AnalysisProgress = () => {
           </Card>
 
           {/* Error State */}
-          {hasError && (
+          {connectionStatus === 'Error' && (
             <Card className="p-6 border-destructive bg-destructive/5">
               <div className="text-center space-y-4">
                 <h3 className="text-lg font-semibold text-destructive">Connection Issues</h3>
