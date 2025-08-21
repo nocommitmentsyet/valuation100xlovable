@@ -165,7 +165,7 @@ const MatterBody = ({
       className={cn(
         "absolute",
         className,
-        isDraggable && "pointer-events-none"
+        isDraggable && "pointer-events-auto cursor-grab"
       )}
     >
       {children}
@@ -544,7 +544,8 @@ const Gravity = forwardRef<GravityRef, GravityProps>(
       <GravityContext.Provider value={{ registerElement, unregisterElement }}>
         <div
           ref={canvas}
-          className={cn(className, "absolute top-0 left-0 w-full h-full")}
+          className={cn(className, "relative w-full h-full pointer-events-none")}
+          style={{ touchAction: "pan-y" }}
           {...props}
         >
           {children}
