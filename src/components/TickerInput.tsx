@@ -2,14 +2,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Search, TrendingUp, CheckCircle } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Search, TrendingUp } from "lucide-react";
 interface CompanyPreview {
   symbol: string;
   name: string;
   sector: string;
   price: string;
-  exchange?: string;
 }
 interface TickerInputProps {
   onStartAnalysis: (ticker: string) => void;
@@ -20,7 +18,6 @@ export const TickerInput = ({
   const [ticker, setTicker] = useState("");
   const [preview, setPreview] = useState<CompanyPreview | null>(null);
   const [isValidating, setIsValidating] = useState(false);
-  const { toast } = useToast();
   const mockPreview = (symbol: string): CompanyPreview => {
     const mockData: Record<string, CompanyPreview> = {
       "TSLA": {
@@ -61,59 +58,18 @@ export const TickerInput = ({
       price: "$0.00"
     };
   };
-  const handleTickerChange = (value: string) => {
+  const handleTickerChange = async (value: string) => {
     const upperValue = value.toUpperCase();
     setTicker(upperValue);
-    // Clear preview when ticker changes
-    setPreview(null);
-  };
-
-  const handleValidate = async () => {
-    if (!ticker || ticker.length < 1) {
-      toast({
-        title: "Enter a ticker symbol",
-        description: "Please enter a stock ticker to validate",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setIsValidating(true);
-    
-    try {
-      const response = await fetch(`http://localhost:8000/api/validate/ticker/${ticker}`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        setPreview({
-          symbol: data.ticker || ticker,
-          name: data.company_name || `${ticker} Corporation`,
-          sector: data.sector || "Unknown",
-          price: data.price || "$0.00",
-          exchange: data.exchange
-        });
-        
-        toast({
-          title: "✅ Valid Ticker",
-          description: `${data.company_name || ticker} (${data.ticker || ticker}) is valid and listed on ${data.exchange || 'exchange'}`,
-        });
-      } else {
-        toast({
-          title: "❌ Invalid Ticker",
-          description: "Invalid ticker. Try again.",
-          variant: "destructive"
-        });
-        setPreview(null);
-      }
-    } catch (error) {
-      toast({
-        title: "❌ Validation Error",
-        description: "Unable to validate ticker. Please try again.",
-        variant: "destructive"
-      });
+    if (upperValue.length >= 2) {
+      setIsValidating(true);
+      // Simulate API call delay
+      setTimeout(() => {
+        setPreview(mockPreview(upperValue));
+        setIsValidating(false);
+      }, 500);
+    } else {
       setPreview(null);
-    } finally {
-      setIsValidating(false);
     }
   };
   const handleSubmit = () => {
@@ -134,27 +90,11 @@ export const TickerInput = ({
       {/* Input Section */}
       <Card className="p-8 shadow-floating border-0 bg-gradient-subtle">
         <div className="space-y-6">
-          <div className="space-y-4">
+          <div className="space-y-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input 
-                id="ticker_input" 
-                value={ticker} 
-                onChange={e => handleTickerChange(e.target.value)} 
-                placeholder="e.g., TSLA, AAPL, MSFT" 
-                className="pl-10 h-14 text-lg border-2 transition-smooth focus:border-primary" 
-                autoComplete="off" 
-              />
+              <Input id="ticker" value={ticker} onChange={e => handleTickerChange(e.target.value)} placeholder="e.g., TSLA, AAPL, MSFT" className="pl-10 h-14 text-lg border-2 transition-smooth focus:border-primary" autoComplete="off" />
             </div>
-            
-            <Button 
-              onClick={handleValidate} 
-              disabled={!ticker || isValidating} 
-              className="w-full h-12 text-base bg-gradient-primary hover:opacity-90 transition-smooth shadow-floating"
-            >
-              <CheckCircle className="w-5 h-5 mr-2" />
-              {isValidating ? "Validating..." : "Validate Ticker"}
-            </Button>
           </div>
 
           {/* Company Preview */}
@@ -177,11 +117,7 @@ export const TickerInput = ({
             </div>}
 
           {/* Start Analysis Button */}
-          <Button 
-            onClick={handleSubmit} 
-            disabled={!preview || isValidating} 
-            className="w-full h-14 text-lg bg-gradient-primary hover:opacity-90 transition-smooth shadow-floating"
-          >
+          <Button onClick={handleSubmit} disabled={!preview || isValidating} className="w-full h-14 text-lg bg-gradient-primary hover:opacity-90 transition-smooth shadow-floating disabled:opacity-100 disabled:bg-gradient-primary">
             Start Deep Analysis
           </Button>
         </div>
@@ -191,10 +127,7 @@ export const TickerInput = ({
       <div className="text-center space-y-3">
         <p className="text-sm text-muted-foreground">Popular stocks to research:</p>
         <div className="flex flex-wrap justify-center gap-2">
-          {["TSLA", "AAPL", "MSFT", "GOOGL", "NVDA"].map(symbol => <Button key={symbol} variant="outline" size="sm" onClick={() => {
-            handleTickerChange(symbol);
-            setTicker(symbol);
-          }} className="transition-smooth hover:bg-accent">
+          {["TSLA", "AAPL", "MSFT", "GOOGL", "NVDA"].map(symbol => <Button key={symbol} variant="outline" size="sm" onClick={() => handleTickerChange(symbol)} className="transition-smooth hover:bg-accent">
               {symbol}
             </Button>)}
         </div>
