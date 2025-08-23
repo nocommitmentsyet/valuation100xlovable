@@ -133,8 +133,8 @@ export const TickerInput = ({
         description: `Starting comprehensive analysis for ${ticker}`,
       });
       
-      // Navigate to analysis progress page
-      navigate(`/analysis/${analysisData.analysis_id}`);
+      // Navigate to analysis progress page with ticker parameter
+      navigate(`/analysis/${analysisData.analysis_id}?ticker=${ticker}`);
       
     } catch (error) {
       toast({

@@ -130,7 +130,7 @@ const AnalysisProgress = () => {
               // Close WebSocket and redirect to results
               ws.close();
               setTimeout(() => {
-                window.location.href = `/report/${newAnalysisId}`;
+                window.location.href = `/report/${newAnalysisId}?ticker=${ticker}`;
               }, 2000);
               break;
 
@@ -181,7 +181,9 @@ const AnalysisProgress = () => {
             try {
               const resultsResponse = await fetch(`https://valuation100x-production.up.railway.app/api/analysis/${newAnalysisId}/results`);
               if (resultsResponse.ok) {
-                window.location.href = `/report/${newAnalysisId}`;
+                const urlParams = new URLSearchParams(window.location.search);
+                const ticker = urlParams.get('ticker');
+                window.location.href = `/report/${newAnalysisId}${ticker ? `?ticker=${ticker}` : ''}`;
               }
             } catch (error) {
               console.error('Error checking results:', error);
@@ -277,13 +279,23 @@ const AnalysisProgress = () => {
       return;
     }
 
-    // Extract ticker from URL params if available, or use a default
+    // Get ticker from URL params or location state
     const urlParams = new URLSearchParams(window.location.search);
-    const ticker = urlParams.get('ticker') || 'AAPL';
+    const ticker = urlParams.get('ticker');
+    
+    if (!ticker) {
+      toast({
+        title: "Missing ticker symbol",
+        description: "No ticker symbol provided for analysis.",
+        variant: "destructive",
+      });
+      navigate('/');
+      return;
+    }
     
     setProgressMessages([{
       timestamp: new Date().toLocaleTimeString(),
-      message: "Initializing analysis...",
+      message: `Initializing analysis for ${ticker}...`,
       type: 'info'
     }]);
     

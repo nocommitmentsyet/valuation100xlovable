@@ -38,10 +38,15 @@ const ReportPage = () => {
       }
 
       const markdownContent = await response.text();
+      
+      // Get ticker from URL params
+      const urlParams = new URLSearchParams(window.location.search);
+      const ticker = urlParams.get('ticker');
+      
       setReportData({
         markdown_content: markdownContent,
-        ticker: "AAPL", // You might want to extract this from the content or get it separately
-        company_name: "Apple Inc." // Same here
+        ticker: ticker || undefined,
+        company_name: undefined // Will be extracted from markdown content if needed
       });
       setError(null);
     } catch (err) {
@@ -169,8 +174,8 @@ Apple Inc. represents a high-quality investment with attractive risk-adjusted re
 *This analysis is for informational purposes only and does not constitute financial advice. Please consult with a qualified financial advisor before making investment decisions.*
 
 *Report generated on ${new Date().toLocaleDateString()}*`,
-        ticker: "AAPL",
-        company_name: "Apple Inc."
+        ticker: "DEMO",
+        company_name: "Demo Company"
       });
     } finally {
       setIsLoading(false);
